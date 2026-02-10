@@ -1,103 +1,157 @@
-# Basic Template
+# babylon-scriptorium
 
-A modern TypeScript project template for Node.js applications.
+> *"Time forks perpetually toward innumerable futures."*
+> — Jorge Luis Borges, *The Garden of Forking Paths*
 
-## Features
+A garden of forking agents — multi-agent LLM orchestration for coding tasks.
 
-- **TypeScript** - Strict type checking with ES2022 target
-- **tsx** - Fast TypeScript execution with watch mode
-- **Vitest** - Fast unit testing framework
-- **ESLint** - Code linting with TypeScript support
-- **Prettier** - Code formatting
-- **Commitlint** - Conventional commit message enforcement
-- **Semantic Release** - Automated versioning and changelog generation
-- **GitHub Actions** - CI/CD workflows for PRs and releases
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+
-- npm
-
-### Installation
+## Setup
 
 ```bash
+# Install dependencies
 npm install
-```
 
-### Development
+# Set at least one API key
+export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
 
-Run in watch mode (auto-reloads on changes):
-
-```bash
-npm run dev
-```
-
-### Building
-
-Build for production:
-
-```bash
+# Build
 npm run build
 ```
 
-Run the built output:
+## Usage
+
+### CLI
 
 ```bash
-npm start
+# Run a task
+babylon run "add input validation to the signup form"
+
+# With options
+babylon run "implement checkout flow" --budget 0.50 --max-depth 2 --no-cli
+
+# Use a specific provider/model
+babylon run "fix the broken test" --provider openai --model gpt-4o
+
+# Non-interactive output
+babylon run "rename getUserById to findUser across the codebase" --renderer log
+
+# JSON output (for piping)
+babylon run "add rate limiting to the API" --renderer none
 ```
 
-## Scripts
+### Programmatic API
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Run with watch mode |
-| `npm run build` | Build for production |
-| `npm start` | Run built output |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Fix linting issues |
-| `npm run format` | Format code with Prettier |
-| `npm run typecheck` | Run TypeScript type checking |
-| `npm run test` | Run tests in watch mode |
-| `npm run test:unit` | Run all tests once |
-| `npm run test:coverage` | Run tests with coverage |
+```typescript
+import { BabylonScriptorium } from "babylon-scriptorium"
 
-## Project Structure
+const scriptorium = new BabylonScriptorium({
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    workingDirectory: process.cwd(),
+    maxDepth: 2,
+    budgetDollars: 1.00,
+})
 
-```
-src/
-├── __tests__/       # Test files
-├── core/            # Core utilities
-│   └── Logger.ts
-└── main.ts          # Application entry point
+const result = await scriptorium.run("implement user authentication")
+
+console.log(result.status)           // "completed" | "failed"
+console.log(result.costSummary)      // breakdown by role, model, agent
+console.log(result.duration)         // milliseconds
 ```
 
-## Logging
+### Configuration file
 
-This template includes a debug-based logging utility. Enable it via environment variable:
+Create `.babylonrc.json` in your project root:
+
+```json
+{
+    "defaultProvider": "anthropic",
+    "defaultModel": "claude-sonnet-4-20250514",
+    "renderer": "terminal",
+    "maxDepth": 2,
+    "maxRetries": 2,
+    "budgetDollars": 1.00,
+    "useCli": true
+}
+```
+
+Precedence: CLI flags > environment variables > `.babylonrc.json` defaults.
+
+## CLI Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--provider <name>` | LLM provider (`openai` or `anthropic`) | `anthropic` |
+| `--model <name>` | Model name | `claude-sonnet-4-20250514` |
+| `--renderer <type>` | Output: `terminal`, `log`, or `none` | `terminal` |
+| `--budget <dollars>` | Maximum spend in USD | unlimited |
+| `--max-depth <n>` | Max recursion depth for decomposition | `2` |
+| `--no-cli` | Disable `invoke_cursor_cli` tool | enabled |
+| `--cwd <path>` | Working directory | current dir |
+
+## Architecture
+
+For a deep dive, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+Every task enters the same recursive cycle:
+
+```
+Analyzer → Planner → Executor → Reviewer → done
+                  ↘ decompose → [subtasks] → Coordinator → done
+```
+
+### The Five Agents
+
+| Agent | Alias | Role |
+|-------|-------|------|
+| **Analyzer** | The Librarian | Explores the codebase, classifies task complexity (simple/medium/complex) |
+| **Planner** | The Cartographer | Produces a spec with acceptance criteria, or decomposes into subtasks |
+| **Executor** | The Dreamer | Implements code changes — the only agent that writes files |
+| **Reviewer** | The Mirror | Reviews changes against the spec, runs tests, passes or fails with notes |
+| **Coordinator** | The Aleph | Merges parallel subtask branches, resolves conflicts, verifies coherence |
+
+### Flow by complexity
+
+**Simple** (rename a variable, fix a typo):
+```
+Librarian → Dreamer → Mirror → done
+```
+
+**Medium** (add a feature, fix a bug):
+```
+Librarian → Cartographer → Dreamer → Mirror → done
+                                   ↖ backslip if Mirror fails
+```
+
+**Complex** (new system, large refactor):
+```
+Librarian → Cartographer (decomposes) →
+  ├─ Subtask 1: Librarian → Dreamer → Mirror
+  ├─ Subtask 2: Librarian → Dreamer → Mirror
+  └─ Subtask 3: Dreamer → Mirror (analysis skipped)
+→ Aleph (merge) → done
+```
+
+### Safety
+
+- **Token budget**: Set `--budget` to cap spend; workflow aborts if exceeded
+- **Command blocklist**: `rm -rf /`, `git push --force`, `npm publish` etc. are blocked
+- **File scope warnings**: Agents are warned when writing outside their assigned scope
+- **Stuck loop detection**: Agents repeating the same tool call are broken out
+- **Max turns**: Each agent has a turn limit; forced completion on the final turn
+- **LLM retry**: Transient API errors (429, 5xx) retry with exponential backoff
+- **Ctrl+C**: Clean abort propagated through all active agents
+
+## Development
 
 ```bash
-DEBUG=app:* npm run dev
+npm run dev          # Watch mode
+npm run build        # Production build
+npm run typecheck    # Type checking
+npm run lint         # ESLint
+npm run test         # Tests (watch mode)
+npm run test:unit    # Tests (single run)
 ```
-
-Or enable specific namespaces:
-
-```bash
-DEBUG=app:api,app:db npm run dev
-```
-
-## Commit Convention
-
-This project uses [Conventional Commits](https://www.conventionalcommits.org/). Commit messages are validated on PR.
-
-Format: `<type>(<scope>): <subject>`
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `build`
-
-Examples:
-- `feat(api): add rate limiting`
-- `fix(db): resolve connection leak`
 
 ## License
 

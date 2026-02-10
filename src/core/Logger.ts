@@ -27,7 +27,12 @@ export function createLogger(namespace: string): createDebug.Debugger {
  * Enable specific: `DEBUG=app:api,app:db`
  */
 export const log = {
-    api: createLogger("api"),
-    db: createLogger("db"),
     app: createLogger("app"),
+    llm: createLogger("llm"),
+    agent: createLogger("agent"),
+    workflow: createLogger("workflow"),
+    orchestrator: createLogger("orchestrator"),
+    tool: createLogger("tool"),
+    persistence: createLogger("persistence"),
+    cli: createLogger("cli"),
 }

@@ -1,9 +1,12 @@
 {
-  "name": "basic-template",
+  "name": "babylon-scriptorium",
   "version": "1.0.0",
-  "description": "TypeScript project template with modern tooling",
+  "description": "A garden of forking agents — multi-agent LLM orchestration for coding tasks",
   "type": "module",
-  "main": "dist/main.js",
+  "main": "dist/index.js",
+  "bin": {
+    "babylon": "dist/main.js"
+  },
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "tsc",
@@ -19,8 +22,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "keywords": [
-    "template",
-    "typescript"
+    "llm",
+    "agents",
+    "orchestration",
+    "multi-agent",
+    "typescript",
+    "babylon-scriptorium"
   ],
   "author": "",
   "license": "MIT",
@@ -45,6 +52,12 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
-    "debug": "^4.4.3"
+    "@anthropic-ai/sdk": "^0.74.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "debug": "^4.4.3",
+    "execa": "^9.6.1",
+    "log-update": "^7.1.0",
+    "openai": "^6.19.0"
   }
 }

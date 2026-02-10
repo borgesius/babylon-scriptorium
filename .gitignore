@@ -26,3 +26,9 @@ coverage/
 
 *.bak
 *.tmp
+
+.cursor/*
+./cursor/rules/*
+.babylon/
+
+trials-output/

@@ -5,7 +5,7 @@ export default defineConfig({
     test: {
         globals: true,
         environment: "node",
-        include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
+        include: ["src/**/*.test.ts", "src/**/*.spec.ts", "generations/1/output/__tests__/**/*.test.ts"],
         exclude: ["node_modules", "dist"],
         pool: "vmThreads",
     },

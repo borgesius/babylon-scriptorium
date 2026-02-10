@@ -11,6 +11,7 @@ export default typescriptEslint.config(
             "node_modules",
             "dist",
             "coverage",
+            "generations",
             "*.config.js",
             "*.config.mjs",
             "*.config.ts",
