@@ -1,0 +1,11 @@
+{
+  "name": "example-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node readName.js"
+  },
+  "author": "",
+  "license": "ISC"
+}

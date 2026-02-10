@@ -1,8 +1,5 @@
 # babylon-scriptorium
 
-> *"Time forks perpetually toward innumerable futures."*
-> — Jorge Luis Borges, *The Garden of Forking Paths*
-
 A garden of forking agents — multi-agent LLM orchestration for coding tasks.
 
 ## Setup
@@ -49,14 +46,14 @@ const scriptorium = new BabylonScriptorium({
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     workingDirectory: process.cwd(),
     maxDepth: 2,
-    budgetDollars: 1.00,
+    budgetDollars: 1.0,
 })
 
 const result = await scriptorium.run("implement user authentication")
 
-console.log(result.status)           // "completed" | "failed"
-console.log(result.costSummary)      // breakdown by role, model, agent
-console.log(result.duration)         // milliseconds
+console.log(result.status) // "completed" | "failed"
+console.log(result.costSummary) // breakdown by role, model, agent
+console.log(result.duration) // milliseconds
 ```
 
 ### Configuration file
@@ -70,7 +67,7 @@ Create `.babylonrc.json` in your project root:
     "renderer": "terminal",
     "maxDepth": 2,
     "maxRetries": 2,
-    "budgetDollars": 1.00,
+    "budgetDollars": 1.0,
     "useCli": true
 }
 ```
@@ -79,15 +76,15 @@ Precedence: CLI flags > environment variables > `.babylonrc.json` defaults.
 
 ## CLI Flags
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--provider <name>` | LLM provider (`openai` or `anthropic`) | `anthropic` |
-| `--model <name>` | Model name | `claude-sonnet-4-20250514` |
-| `--renderer <type>` | Output: `terminal`, `log`, or `none` | `terminal` |
-| `--budget <dollars>` | Maximum spend in USD | unlimited |
-| `--max-depth <n>` | Max recursion depth for decomposition | `2` |
-| `--no-cli` | Disable `invoke_cursor_cli` tool | enabled |
-| `--cwd <path>` | Working directory | current dir |
+| Flag                 | Description                            | Default                    |
+| -------------------- | -------------------------------------- | -------------------------- |
+| `--provider <name>`  | LLM provider (`openai` or `anthropic`) | `anthropic`                |
+| `--model <name>`     | Model name                             | `claude-sonnet-4-20250514` |
+| `--renderer <type>`  | Output: `terminal`, `log`, or `none`   | `terminal`                 |
+| `--budget <dollars>` | Maximum spend in USD                   | unlimited                  |
+| `--max-depth <n>`    | Max recursion depth for decomposition  | `2`                        |
+| `--no-cli`           | Disable `invoke_cursor_cli` tool       | enabled                    |
+| `--cwd <path>`       | Working directory                      | current dir                |
 
 ## Architecture
 
@@ -95,41 +92,57 @@ For a deep dive, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Every task enters the same recursive cycle:
 
-```
-Analyzer → Planner → Executor → Reviewer → done
-                  ↘ decompose → [subtasks] → Coordinator → done
+```mermaid
+flowchart LR
+    Analyzer --> Planner
+    Planner --> Executor
+    Executor --> Reviewer
+    Reviewer --> Done["done"]
+    Planner --> Decompose["decompose"]
+    Decompose --> Subtasks["subtasks"]
+    Subtasks --> Coordinator
+    Coordinator --> Done
 ```
 
 ### The Five Agents
 
-| Agent | Alias | Role |
-|-------|-------|------|
-| **Analyzer** | The Librarian | Explores the codebase, classifies task complexity (simple/medium/complex) |
-| **Planner** | The Cartographer | Produces a spec with acceptance criteria, or decomposes into subtasks |
-| **Executor** | The Dreamer | Implements code changes — the only agent that writes files |
-| **Reviewer** | The Mirror | Reviews changes against the spec, runs tests, passes or fails with notes |
-| **Coordinator** | The Aleph | Merges parallel subtask branches, resolves conflicts, verifies coherence |
+| Agent           | Alias            | Role                                                                      |
+| --------------- | ---------------- | ------------------------------------------------------------------------- |
+| **Analyzer**    | The Librarian    | Explores the codebase, classifies task complexity (simple/medium/complex) |
+| **Planner**     | The Cartographer | Produces a spec with acceptance criteria, or decomposes into subtasks     |
+| **Executor**    | The Dreamer      | Implements code changes — the only agent that writes files                |
+| **Reviewer**    | The Mirror       | Reviews changes against the spec, runs tests, passes or fails with notes  |
+| **Coordinator** | The Aleph        | Merges parallel subtask branches, resolves conflicts, verifies coherence  |
 
 ### Flow by complexity
 
 **Simple** (rename a variable, fix a typo):
-```
-Librarian → Dreamer → Mirror → done
+
+```mermaid
+flowchart LR
+    Librarian --> Dreamer --> Mirror --> Done["done"]
 ```
 
 **Medium** (add a feature, fix a bug):
-```
-Librarian → Cartographer → Dreamer → Mirror → done
-                                   ↖ backslip if Mirror fails
+
+```mermaid
+flowchart LR
+    Librarian --> Cartographer --> Dreamer --> Mirror --> Done["done"]
+    Mirror -->|backslip| Dreamer
 ```
 
 **Complex** (new system, large refactor):
-```
-Librarian → Cartographer (decomposes) →
-  ├─ Subtask 1: Librarian → Dreamer → Mirror
-  ├─ Subtask 2: Librarian → Dreamer → Mirror
-  └─ Subtask 3: Dreamer → Mirror (analysis skipped)
-→ Aleph (merge) → done
+
+```mermaid
+flowchart TB
+    Librarian --> Cartographer
+    Cartographer --> Sub1["Subtask 1: Librarian → Dreamer → Mirror"]
+    Cartographer --> Sub2["Subtask 2: Librarian → Dreamer → Mirror"]
+    Cartographer --> Sub3["Subtask 3: Dreamer → Mirror"]
+    Sub1 --> Aleph
+    Sub2 --> Aleph
+    Sub3 --> Aleph
+    Aleph["Aleph (merge)"] --> Done["done"]
 ```
 
 ### Safety
@@ -149,9 +162,15 @@ npm run dev          # Watch mode
 npm run build        # Production build
 npm run typecheck    # Type checking
 npm run lint         # ESLint
+npm run lint:fix     # Fix ESLint issues automatically
+npm run format       # Format with Prettier
+npm run format:check # Check formatting (CI)
 npm run test         # Tests (watch mode)
 npm run test:unit    # Tests (single run)
+npm run test:coverage # Coverage report
 ```
+
+Before completing any task, ensure: `npm run typecheck && npm run lint && npm run test:unit`. See [.cursor/rules/workflow.mdc](.cursor/rules/workflow.mdc) for full workflow and commit conventions.
 
 ## License
 

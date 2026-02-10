@@ -75,7 +75,6 @@ export class WorkflowEngine {
     private allAgentResults: AgentResult[] = []
     private taskCounter = 0
     private rootTaskId: string | null = null
-    private currentSubtaskId: string | null = null
     private orgChart: OrgChart = new OrgChart()
     private oversightTracker: OversightTracker | null = null
     private compositeOversightContext: {

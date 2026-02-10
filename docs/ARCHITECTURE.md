@@ -10,6 +10,7 @@ This document describes the internal design and architecture of babylon-scriptor
 - [System Overview](#system-overview)
 - [The Recursive Task Cycle](#the-recursive-task-cycle)
 - [The Five Agents](#the-five-agents)
+- [Steward and Oracle](#steward-and-oracle)
 - [Module Map](#module-map)
 - [Agent Runtime](#agent-runtime)
 - [Workflow Engine](#workflow-engine)
@@ -34,16 +35,17 @@ babylon-scriptorium is a multi-agent LLM orchestration system for coding tasks. 
 
 The system is built as a pipeline of layers:
 
-```
-CLI / Public API
-    └─ Orchestrator
-        ├─ WorkflowEngine (recursive task cycle)
-        │   └─ AgentRuntime (per-agent conversation loop)
-        │       ├─ LLM Provider (OpenAI / Anthropic)
-        │       └─ Tool Execution
-        ├─ TaskManager + FileStore (persistence)
-        ├─ EventBus (real-time events)
-        └─ Renderer (terminal / log / none)
+```mermaid
+flowchart TB
+    API["CLI / Public API"]
+    API --> Orchestrator
+    Orchestrator --> WorkflowEngine
+    Orchestrator --> Persistence["TaskManager + FileStore"]
+    Orchestrator --> EventBus
+    Orchestrator --> Renderer["Renderer (terminal / log / none)"]
+    WorkflowEngine --> AgentRuntime
+    AgentRuntime --> LLM["LLM Provider (OpenAI / Anthropic)"]
+    AgentRuntime --> Tools["Tool Execution"]
 ```
 
 Every layer communicates through typed interfaces. The EventBus provides the cross-cutting observation channel: the Renderer, cost tracker, and any future integrations (WebSocket, dashboard) all subscribe to the same event stream.
@@ -54,22 +56,25 @@ Every layer communicates through typed interfaces. The EventBus provides the cro
 
 Every task — whether top-level or a subtask three levels deep — enters the same cycle:
 
-```
-                    ┌──────────────────────────────────────────────┐
-                    │                                              │
-  Task Input ──► Analyzer ──► Planner ──► Executor ──► Reviewer ──┤
-                    │            │            ▲            │       │
-                    │            │            │            │       │
-                    │            │         backslip        │       │
-                    │            │         (retry)         │       │
-                    │            │            │            │       │
-                    │            │            └────────────┘       │
-                    │            │                                 │
-                    │            └──► Decompose ──► [Subtasks] ──► Coordinator ──► Done
-                    │                                              │
-                    │  simple ──────────────────► Executor ──► Reviewer ──► Done
-                    │                                              │
-                    └──────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    Input["Task Input"] --> Analyzer
+    Analyzer -->|simple| Executor
+    Analyzer --> Planner
+    Planner --> Executor
+    Executor --> Reviewer
+    Reviewer -->|backslip| Executor
+    Reviewer --> Done
+    Planner --> Decompose["Decompose"]
+    Decompose --> Subtasks["Subtasks"]
+    Subtasks --> Coordinator
+    Coordinator --> QAPass{QA pass?}
+    QAPass -->|yes| Done
+    QAPass -->|no| Steward
+    Steward --> Retry["retry loop"]
+    Steward -->|escalate, root only| Oracle
+    Oracle --> Nudge["nudge / retry_once / escalate_to_user"]
+    Retry --> Coordinator
 ```
 
 **Three paths through the cycle**, determined by the Analyzer's complexity classification:
@@ -143,47 +148,58 @@ Active only for complex tasks with parallel subtasks. Merges branches from all c
 
 ## Module Map
 
-```
-src/
-├── agents/
-│   ├── AgentRuntime.ts      # Per-agent conversation loop
-│   ├── roles.ts             # System prompts for all 5 roles
-│   └── index.ts
-├── core/
-│   ├── Config.ts            # Default models and turn limits per role
-│   ├── errors.ts            # Typed error hierarchy
-│   ├── Logger.ts            # Debug-based structured logging
-│   └── Pricing.ts           # Model pricing table, cost calculation
-├── events/
-│   ├── EventBus.ts          # Typed pub/sub event bus
-│   ├── types.ts             # TaskBotEvent discriminated union
-│   └── index.ts
-├── llm/
-│   ├── AnthropicProvider.ts # Anthropic SDK adapter
-│   ├── OpenAIProvider.ts    # OpenAI SDK adapter
-│   └── index.ts             # Factory: createLLMProvider()
-├── orchestrator/
-│   ├── Orchestrator.ts      # Top-level wiring, cost tracking, budget enforcement
-│   ├── TaskManager.ts       # TaskData CRUD with file-backed persistence
-│   └── index.ts
-├── persistence/
-│   ├── FileStore.ts         # JSON file store with atomic writes
-│   └── index.ts
-├── renderer/
-│   ├── TerminalRenderer.ts  # Live-updating terminal tree view
-│   ├── LogRenderer.ts       # Line-by-line event logging
-│   ├── types.ts             # Renderer interface, RenderNode
-│   └── index.ts             # Factory: createRenderer()
-├── tools/
-│   ├── definitions.ts       # All tool implementations + getToolsForRole()
-│   ├── ToolRegistry.ts      # Optional per-role tool overrides
-│   └── index.ts
-├── workflow/
-│   ├── WorkflowEngine.ts    # Recursive task cycle
-│   └── index.ts
-├── index.ts                 # Public API: BabylonScriptorium class
-├── main.ts                  # CLI entry point (Commander)
-└── types.ts                 # All shared type definitions
+```mermaid
+flowchart TB
+    subgraph src["src/"]
+        subgraph agents["agents/"]
+            AgentRuntime["AgentRuntime.ts"]
+            roles["roles.ts"]
+            agents_index["index.ts"]
+        end
+        subgraph core["core/"]
+            Config["Config.ts"]
+            errors["errors.ts"]
+            Logger["Logger.ts"]
+            Pricing["Pricing.ts"]
+        end
+        subgraph events["events/"]
+            EventBus["EventBus.ts"]
+            events_types["types.ts"]
+            events_index["index.ts"]
+        end
+        subgraph llm["llm/"]
+            Anthropic["AnthropicProvider.ts"]
+            OpenAI["OpenAIProvider.ts"]
+            llm_index["index.ts"]
+        end
+        subgraph orchestrator["orchestrator/"]
+            Orchestrator["Orchestrator.ts"]
+            TaskManager["TaskManager.ts"]
+            orch_index["index.ts"]
+        end
+        subgraph persistence["persistence/"]
+            FileStore["FileStore.ts"]
+            persist_index["index.ts"]
+        end
+        subgraph renderer["renderer/"]
+            TerminalRenderer["TerminalRenderer.ts"]
+            LogRenderer["LogRenderer.ts"]
+            renderer_types["types.ts"]
+            renderer_index["index.ts"]
+        end
+        subgraph tools["tools/"]
+            definitions["definitions.ts"]
+            ToolRegistry["ToolRegistry.ts"]
+            tools_index["index.ts"]
+        end
+        subgraph workflow["workflow/"]
+            WorkflowEngine["WorkflowEngine.ts"]
+            workflow_index["index.ts"]
+        end
+        main["main.ts"]
+        index["index.ts"]
+        types["types.ts"]
+    end
 ```
 
 ---
