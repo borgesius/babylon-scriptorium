@@ -75,6 +75,33 @@ async function loadTasks(): Promise<TrialTask[]> {
     return tasks
 }
 
+interface ParsedResult {
+    status?: string
+    artifacts?: Array<{ content?: string }>
+    duration?: number
+    costSummary?: { totalCost?: { totalCost?: number } }
+}
+
+function extractFields(result: ParsedResult): {
+    status?: string
+    reason?: string
+    duration?: number
+    cost?: number
+} {
+    const status = result.status
+    const reason =
+        status !== "completed" &&
+        result.artifacts &&
+        result.artifacts.length > 0
+            ? result.artifacts[result.artifacts.length - 1]?.content
+            : undefined
+    const duration = result.duration
+    const cost =
+        result.costSummary?.totalCost?.totalCost ??
+        (result.costSummary as { totalCost?: number } | undefined)?.totalCost
+    return { status, reason, duration, cost }
+}
+
 function parseRunResult(stdout: string): {
     status?: string
     reason?: string
@@ -82,62 +109,40 @@ function parseRunResult(stdout: string): {
     cost?: number
 } | null {
     const trimmed = stdout.trim()
+    if (!trimmed) return null
+
+    // 1. Try parsing the entire stdout as JSON (handles pretty-printed output)
+    try {
+        return extractFields(JSON.parse(trimmed) as ParsedResult)
+    } catch {
+        /* not a single JSON blob */
+    }
+
+    // 2. Try extracting the last top-level JSON object from stdout.
+    //    The CLI may print debug/log lines before the final JSON result.
+    //    Find the last '{' that starts a line and grab everything from there.
+    const lastBraceIdx = trimmed.lastIndexOf("\n{")
+    if (lastBraceIdx !== -1) {
+        try {
+            const candidate = trimmed.slice(lastBraceIdx + 1)
+            return extractFields(JSON.parse(candidate) as ParsedResult)
+        } catch {
+            /* not valid JSON from that point */
+        }
+    }
+
+    // 3. Fallback: try the single last line (compact JSON after other output)
     const lines = trimmed.split("\n")
     const lastLine = lines[lines.length - 1]
-    if (!lastLine) return null
-    try {
-        const result = JSON.parse(lastLine) as {
-            status?: string
-            artifacts?: Array<{ content?: string }>
-            duration?: number
-            costSummary?: { totalCost?: { totalCost?: number } }
-        }
-        const status = result.status
-        const reason =
-            status !== "completed" &&
-            result.artifacts &&
-            result.artifacts.length > 0
-                ? (result.artifacts[result.artifacts.length - 1]?.content as
-                      | string
-                      | undefined)
-                : undefined
-        const duration = result.duration
-        const cost =
-            result.costSummary?.totalCost?.totalCost ??
-            result.costSummary?.totalCost
-        return { status, reason, duration, cost }
-    } catch {
+    if (lastLine) {
         try {
-            const firstJsonLine = lines.find((l) => l.trim().startsWith("{"))
-            if (firstJsonLine) {
-                const result = JSON.parse(firstJsonLine) as {
-                    status?: string
-                    artifacts?: Array<{ content?: string }>
-                    duration?: number
-                    costSummary?: { totalCost?: { totalCost?: number } }
-                }
-                const status = result.status
-                const reason =
-                    status !== "completed" &&
-                    result.artifacts &&
-                    result.artifacts.length > 0
-                        ? result.artifacts[result.artifacts.length - 1]?.content
-                        : undefined
-                return {
-                    status,
-                    reason,
-                    duration: result.duration,
-                    cost:
-                        result.costSummary?.totalCost?.totalCost ??
-                        (result.costSummary as { totalCost?: number } | undefined)
-                            ?.totalCost,
-                }
-            }
+            return extractFields(JSON.parse(lastLine) as ParsedResult)
         } catch {
             /* ignore */
         }
-        return null
     }
+
+    return null
 }
 
 function runTask(task: TrialTask): Promise<TrialRunRecord> {
