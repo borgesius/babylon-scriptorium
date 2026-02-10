@@ -1,0 +1,87 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Coding Conventions
+
+This document outlines the coding conventions and best practices for the project.
+
+## Philosophy
+
+- Prioritize **maintainability**, **readability**, and **modularity** over conciseness or cleverness
+- Code should be self-documenting through semantic naming and clear structure
+- Favor composition over inheritance
+- Adhere to SOLID principles where applicable
+
+## Communication
+
+- **Don't be sycophantic** - skip the flattery and excessive affirmations
+- **Question what is questionable** - if something seems wrong, suboptimal, or unclear, raise it directly
+- **Don't be contrarian for its own sake** - push back when there's a genuine concern, not just to seem thorough
+- Be direct and honest; respectful disagreement is more valuable than false agreement
+
+## Design Decisions
+
+- **Never make design decisions without consulting the user** - implementation details are fine, but API design, architectural choices, and significant behavioral changes require explicit approval
+- **Do not auto-fill values** - if a value is unknown or needs design input, mark it explicitly as a placeholder (e.g., `const TIMEOUT_MS = 5000 // PLACEHOLDER: needs tuning`)
+- When implementing features, ask clarifying questions rather than making assumptions about intended behavior
+- If a design document exists, follow it; if something is ambiguous or missing, ask before inventing
+
+## TypeScript
+
+- Use TypeScript for all code
+- Follow strict type checking
+- Prefer explicit types over `any`
+- Use consistent type imports/exports
+
+## Code Style
+
+- Use ESLint for code linting
+- Follow Prettier formatting rules
+- Use 4 space indentation
+
+## Comments
+
+- **Omit inline comments** - they are largely unnecessary when code is readable
+- Only add comments in the following cases:
+  - JSDoc for public APIs, functions, and complex types
+  - When code behavior is unexpected or goes contrary to normal expectations
+  - For necessary workarounds with explanations of why they exist
+- Write code that explains itself through:
+  - Clear, descriptive variable and function names
+  - Small, focused functions with single responsibilities
+  - Descriptive type names
+  - Logical code organization
+
+## Functions and Methods
+
+- Keep functions small and focused on a single responsibility
+- Use descriptive names that indicate what the function does
+- Prefer pure functions where possible
+- Explicit return types on all functions
+
+## Naming Conventions
+
+- Use PascalCase for classes, interfaces, types, and enums
+- Use camelCase for variables, functions, and methods
+- Use SCREAMING_SNAKE_CASE for constants
+- Use descriptive names that convey meaning without requiring comments
+
+## File Organization
+
+- One class/component per file (with reasonable exceptions for tightly coupled helpers)
+- Group related functionality in directories
+- Use barrel exports (index.ts) for clean public APIs
+
+## Error Handling
+
+- Handle errors explicitly rather than silently failing
+- Use typed error handling where possible
+- Provide meaningful error messages
+
+## Testing
+
+- Write tests for business logic and critical paths
+- Keep tests focused and readable
+- Use descriptive test names that explain the expected behavior

@@ -1,0 +1,23 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Project Structure
+
+A TypeScript project template for Node.js applications.
+
+## Repository Organization
+
+- `/src` - Main application source code
+  - `/src/core` - Core utilities (Logger)
+  - `/src/__tests__` - Test files
+  - `/src/main.ts` - Application entry point
+
+## Technology Stack
+
+- **Runtime**: Node.js
+- **Language**: TypeScript
+- **Testing**: Vitest
+- **Linting**: ESLint + Prettier
+- **CI/CD**: GitHub Actions with semantic-release

@@ -1,0 +1,72 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Development Workflow
+
+This document outlines development workflows and processes for the project.
+
+## Getting Started
+
+1. Install Node.js 20+ and npm
+2. Run `npm install` to install all dependencies
+3. Use `npm run dev` to run in watch mode
+
+## Common Commands
+
+- `npm run dev` - Run with watch mode (auto-reload on changes)
+- `npm run build` - Build for production
+- `npm run start` - Run the built output
+- `npm run lint` - Run ESLint on all files
+- `npm run lint:fix` - Fix ESLint issues automatically
+- `npm run format` - Format code with Prettier
+- `npm run typecheck` - Run TypeScript type checking
+- `npm run test` - Run tests in watch mode
+- `npm run test:unit` - Run all tests once
+
+## Debugging
+
+- Use F5 in VS Code/Cursor with the provided launch configurations
+- "Run" - Debug the main entry point
+- "Debug Current File" - Debug the currently open file
+
+## Logging
+
+- Use `log.*` from `src/core/Logger.ts` instead of `console.log`
+- Enable output: `DEBUG=app:*` environment variable
+- Filter by system: `DEBUG=app:api,app:db`
+
+## Code Quality Standards
+
+- Do not add comments unless they provide critical context that cannot be understood from well-written, semantic code
+- Never disable linting rules without a very good reason and detailed explanation
+- **Before completing any task, ALL of the following must pass:**
+  ```bash
+  npm run typecheck && npm run lint && npm run test:unit
+  ```
+- If any check fails, fix the issues before considering the task complete
+- Run `npm run build` to verify the build succeeds for significant changes
+
+## Commits
+
+- **Follow conventional commit format** - This enables automated changelog generation and semantic versioning
+- Commit types:
+  - `feat`: New features
+  - `fix`: Bug fixes
+  - `docs`: Documentation changes
+  - `style`: Code style changes (formatting, missing semicolons, etc.)
+  - `refactor`: Code refactoring without changing functionality
+  - `perf`: Performance improvements
+  - `test`: Adding or updating tests
+  - `chore`: Maintenance tasks, dependency updates, etc.
+  - `build`: Changes to build system or external dependencies
+- Format: `<type>(<scope>): <subject>`
+  - Example: `feat(api): add rate limiting`
+  - Example: `fix(db): resolve connection pool leak`
+
+## Git Workflow
+
+- Keep commits atomic and focused
+- Write clear, descriptive commit messages
+- Pull and rebase before pushing

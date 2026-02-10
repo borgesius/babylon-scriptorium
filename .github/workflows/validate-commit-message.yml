@@ -1,0 +1,41 @@
+name: Validate Commit Message
+
+on:
+    pull_request:
+        types:
+            - opened
+            - edited
+            - synchronize
+    merge_group:
+        types: [checks_requested]
+
+jobs:
+    validate-commit-message:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 2
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Validate Commit Message
+              run: |
+                  if [[ "${{ github.event_name }}" == "merge_group" ]]; then
+                    # Validate the merge commit message
+                    echo "Commit message:"
+                    git log -1 --pretty=%B
+                    git log -1 --pretty=%B | npx commitlint
+                  else
+                    # Validate PR title (used as commit message on squash merge)
+                    echo "PR Title: ${{ github.event.pull_request.title }}"
+                    echo "${{ github.event.pull_request.title }}" | npx commitlint
+                  fi
