@@ -1,3 +1,10 @@
+# 1.0.0 (2026-02-10)
+
+
+### Features
+
+* babylon scriptorium v1 ([ec83630](https://github.com/borgesius/taskbot/commit/ec83630e7903be502b85897e80e58007b202a8cd))
+
 # 1.0.0 (2026-02-05)
 
 
